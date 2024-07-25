@@ -1,0 +1,26 @@
+#include<stdio.h>
+#include<string.h>
+#include<ctype.h>
+int main()
+{
+	char plaintext[100],ch;
+	int shift,i;
+	printf("enter the string :");
+	fgets(plaintext,sizeof(plaintext),stdin);
+	printf("enter the shift value");
+	scanf("%d",&shift);
+    for (i = 0; i < strlen(plaintext); i++) {
+        ch = plaintext[i];
+        if (isalpha(ch)) {
+            char base = islower(ch) ? 'a' : 'A';
+            ch = (ch - base + shift) % 26 + base;
+        }
+                plaintext[i] = ch;
+    }
+    printf("Encrypted message: %s\n", plaintext);
+    return 0;
+}
+output:
+enter the string :hello world
+enter the shift value3
+Encrypted message: khoor zruog
