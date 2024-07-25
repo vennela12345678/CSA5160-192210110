@@ -1,0 +1,92 @@
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+#define ALPHABET_SIZE 26
+
+// Function to create the monoalphabetic cipher sequence
+void createCipherSequence(const char *keyword, char cipherSeq[ALPHABET_SIZE]) {
+    int used[ALPHABET_SIZE] = {0};  // Array to keep track of used letters
+    int index = 0;
+
+    // Add the keyword to the cipher sequence
+    for (int i = 0; keyword[i] != '\0'; i++) {
+        char ch = toupper(keyword[i]);
+        if (!used[ch - 'A']) {
+            cipherSeq[index++] = ch;
+            used[ch - 'A'] = 1;
+        }
+    }
+
+    // Add remaining unused letters to the cipher sequence
+    for (char ch = 'A'; ch <= 'Z'; ch++) {
+        if (!used[ch - 'A']) {
+            cipherSeq[index++] = ch;
+        }
+    }
+}
+
+// Function to encrypt the plaintext using the cipher sequence
+void encrypt(const char *plaintext, char *ciphertext, const char cipherSeq[ALPHABET_SIZE]) {
+    for (int i = 0; plaintext[i] != '\0'; i++) {
+        if (isalpha(plaintext[i])) {
+            char ch = toupper(plaintext[i]);
+            ciphertext[i] = cipherSeq[ch - 'A'];
+        } else {
+            ciphertext[i] = plaintext[i];  // Non-alphabetic characters remain unchanged
+        }
+    }
+    ciphertext[strlen(plaintext)] = '\0';  // Null-terminate the ciphertext
+}
+
+// Function to decrypt the ciphertext using the cipher sequence
+void decrypt(const char *ciphertext, char *plaintext, const char cipherSeq[ALPHABET_SIZE]) {
+    char reverseSeq[ALPHABET_SIZE];
+
+    // Create a reverse sequence to map cipher letters back to plain letters
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        reverseSeq[cipherSeq[i] - 'A'] = 'A' + i;
+    }
+
+    for (int i = 0; ciphertext[i] != '\0'; i++) {
+        if (isalpha(ciphertext[i])) {
+            char ch = toupper(ciphertext[i]);
+            plaintext[i] = reverseSeq[ch - 'A'];
+        } else {
+            plaintext[i] = ciphertext[i];  // Non-alphabetic characters remain unchanged
+        }
+    }
+    plaintext[strlen(ciphertext)] = '\0';  // Null-terminate the plaintext
+}
+
+int main() {
+    const char *keyword = "CIPHER";
+    char cipherSeq[ALPHABET_SIZE];
+    createCipherSequence(keyword, cipherSeq);
+
+    printf("Keyword: %s\n", keyword);
+    printf("Cipher sequence: ");
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        printf("%c ", cipherSeq[i]);
+    }
+    printf("\n");
+
+    const char *plaintext = "HELLO WORLD";
+    char ciphertext[100];
+    char decryptedtext[100];
+
+    encrypt(plaintext, ciphertext, cipherSeq);
+    printf("Plaintext: %s\n", plaintext);
+    printf("Ciphertext: %s\n", ciphertext);
+
+    decrypt(ciphertext, decryptedtext, cipherSeq);
+    printf("Decrypted text: %s\n", decryptedtext);
+
+    return 0;
+}
+output:
+Keyword: CIPHER
+Cipher sequence: C I P H E R A B D F G J K L M N O Q S T U V W X Y Z
+Plaintext: HELLO WORLD
+Ciphertext: BEJJM WMQJH
+Decrypted text: HELLO WORLD
