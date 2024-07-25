@@ -1,0 +1,83 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+double frequencies[26] = {
+    0.08167, 0.01492, 0.02782, 0.04253, 0.12702, 0.02228, 0.02015, 
+    0.06094, 0.06966, 0.00153, 0.00772, 0.04025, 0.02406, 0.06749, 
+    0.07507, 0.01929, 0.00095, 0.05987, 0.06327, 0.09056, 0.02758, 
+    0.00978, 0.02360, 0.00150, 0.01974, 0.00074                     
+};
+void decrypt(char *ciphertext, int shift) {
+    int len = strlen(ciphertext);
+    for (int i = 0; i < len; i++) {
+        if (isalpha(ciphertext[i])) {
+            if (isupper(ciphertext[i])) {
+                ciphertext[i] = ((ciphertext[i] - 'A' - shift + 26) % 26) + 'A';
+            } else {
+                ciphertext[i] = ((ciphertext[i] - 'a' - shift + 26) % 26) + 'a';
+            }
+        }
+    }
+}
+double calculateScore(char *plaintext) {
+    int count[26] = {0};
+    int len = strlen(plaintext);
+    for (int i = 0; i < len; i++) {
+        if (isalpha(plaintext[i])) {
+            count[tolower(plaintext[i]) - 'a']++;
+        }
+    }
+    double score = 0.0;
+    for (int i = 0; i < 26; i++) {
+        score += frequencies[i] * count[i];
+    }
+    return score;
+}
+
+int main() {
+    char ciphertext[] = "Uifsf b tfdsfu.";
+    int len = strlen(ciphertext);
+
+    printf("Ciphertext: %s\n\n", ciphertext);
+
+    printf("Possible Decryptions:\n");
+    for (int shift = 1; shift < 26; shift++) {
+        char plaintext[len + 1];
+        strcpy(plaintext, ciphertext);
+        decrypt(plaintext, shift);
+
+        printf("Shift: %d, Plaintext: %s\n", shift, plaintext);
+    }
+
+    return 0;
+}
+output:
+Ciphertext: Uifsf b tfdsfu.
+
+Possible Decryptions:
+Shift: 1, Plaintext: There a secret.
+Shift: 2, Plaintext: Sgdqd z rdbqds.
+Shift: 3, Plaintext: Rfcpc y qcapcr.
+Shift: 4, Plaintext: Qebob x pbzobq.
+Shift: 5, Plaintext: Pdana w oaynap.
+Shift: 6, Plaintext: Oczmz v nzxmzo.
+Shift: 7, Plaintext: Nbyly u mywlyn.
+Shift: 8, Plaintext: Maxkx t lxvkxm.
+Shift: 9, Plaintext: Lzwjw s kwujwl.
+Shift: 10, Plaintext: Kyviv r jvtivk.
+Shift: 11, Plaintext: Jxuhu q iushuj.
+Shift: 12, Plaintext: Iwtgt p htrgti.
+Shift: 13, Plaintext: Hvsfs o gsqfsh.
+Shift: 14, Plaintext: Gurer n frperg.
+Shift: 15, Plaintext: Ftqdq m eqodqf.
+Shift: 16, Plaintext: Espcp l dpncpe.
+Shift: 17, Plaintext: Drobo k combod.
+Shift: 18, Plaintext: Cqnan j bnlanc.
+Shift: 19, Plaintext: Bpmzm i amkzmb.
+Shift: 20, Plaintext: Aolyl h zljyla.
+Shift: 21, Plaintext: Znkxk g ykixkz.
+Shift: 22, Plaintext: Ymjwj f xjhwjy.
+Shift: 23, Plaintext: Xlivi e wigvix.
+Shift: 24, Plaintext: Wkhuh d vhfuhw.
+Shift: 25, Plaintext: Vjgtg c ugetgv.
