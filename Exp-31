@@ -1,0 +1,70 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <openssl/aes.h>
+
+// Function to print a block in hexadecimal format
+void print_block(const uint8_t *block, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        printf("%02x", block[i]);
+    }
+    printf("\n");
+}
+
+// Function to perform left shift and XOR with constant
+void left_shift_and_xor(uint8_t *out, const uint8_t *in, size_t len, uint8_t xor_const) {
+    uint8_t overflow = in[0] & 0x80;
+    for (size_t i = 0; i < len - 1; i++) {
+        out[i] = (in[i] << 1) | (in[i + 1] >> 7);
+    }
+    out[len - 1] = in[len - 1] << 1;
+    if (overflow) {
+        out[len - 1] ^= xor_const;
+    }
+}
+
+void generate_subkeys(uint8_t *K1, uint8_t *K2, const uint8_t *key, size_t block_size) {
+    AES_KEY aes_key;
+    uint8_t L[AES_BLOCK_SIZE] = {0};
+    uint8_t zero_block[AES_BLOCK_SIZE] = {0};
+
+    // Constants for 128-bit block size
+    uint8_t Rb128 = 0x87;
+    uint8_t Rb64 = 0x1B;
+
+    uint8_t Rb = (block_size == 128) ? Rb128 : Rb64;
+
+    // Set the encryption key
+    AES_set_encrypt_key(key, 128, &aes_key);
+
+    // Encrypt the zero block to get L
+    AES_encrypt(zero_block, L, &aes_key);
+    printf("L: ");
+    print_block(L, block_size / 8);
+
+    // Generate K1
+    left_shift_and_xor(K1, L, block_size / 8, Rb);
+    printf("K1: ");
+    print_block(K1, block_size / 8);
+
+    // Generate K2
+    left_shift_and_xor(K2, K1, block_size / 8, Rb);
+    printf("K2: ");
+    print_block(K2, block_size / 8);
+}
+
+int main() {
+    uint8_t key[AES_BLOCK_SIZE] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 
+                                   0xab, 0xf7, 0x43, 0x9a, 0x6a, 0xc4, 0xa6, 0x28};
+    uint8_t K1[AES_BLOCK_SIZE] = {0};
+    uint8_t K2[AES_BLOCK_SIZE] = {0};
+
+    printf("Generating subkeys for 128-bit block size...\n");
+    generate_subkeys(K1, K2, key, 128);
+
+    // Uncomment the following lines to generate subkeys for 64-bit block size
+    // printf("Generating subkeys for 64-bit block size...\n");
+    // generate_subkeys(K1, K2, key, 64);
+
+    return 0;
+}
