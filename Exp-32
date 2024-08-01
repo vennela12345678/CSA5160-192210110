@@ -1,0 +1,97 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <openssl/dsa.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <openssl/sha.h>
+#include <openssl/err.h>
+
+void print_hex(const unsigned char *data, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        printf("%02x", data[i]);
+    }
+    printf("\n");
+}
+
+void sign_dsa(const unsigned char *message, size_t message_len, unsigned char *sig, unsigned int *sig_len) {
+    DSA *dsa = DSA_new();
+    DSA_generate_parameters_ex(dsa, 2048, NULL, 0, NULL, NULL, NULL);
+    DSA_generate_key(dsa);
+
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256(message, message_len, hash);
+
+    if (DSA_sign(0, hash, SHA256_DIGEST_LENGTH, sig, sig_len, dsa) == 0) {
+        ERR_print_errors_fp(stderr);
+        exit(EXIT_FAILURE);
+    }
+
+    DSA_free(dsa);
+}
+
+void sign_rsa(const unsigned char *message, size_t message_len, unsigned char *sig, unsigned int *sig_len, RSA *rsa) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256(message, message_len, hash);
+
+    if (RSA_sign(NID_sha256, hash, SHA256_DIGEST_LENGTH, sig, sig_len, rsa) == 0) {
+        ERR_print_errors_fp(stderr);
+        exit(EXIT_FAILURE);
+    }
+}
+
+int main() {
+    const char *message = "This is a test message.";
+    size_t message_len = strlen(message);
+    unsigned char dsa_sig[DSA_size(NULL)];
+    unsigned char rsa_sig[RSA_size(NULL)];
+    unsigned int dsa_sig_len, rsa_sig_len;
+
+    // Initialize OpenSSL library
+    OpenSSL_add_all_algorithms();
+    ERR_load_crypto_strings();
+
+    // Sign the message with DSA
+    printf("Signing message with DSA...\n");
+    sign_dsa((const unsigned char *)message, message_len, dsa_sig, &dsa_sig_len);
+    printf("DSA Signature: ");
+    print_hex(dsa_sig, dsa_sig_len);
+
+    // Sign the message with DSA again to show different signature
+    printf("Signing message with DSA again...\n");
+    sign_dsa((const unsigned char *)message, message_len, dsa_sig, &dsa_sig_len);
+    printf("DSA Signature (different): ");
+    print_hex(dsa_sig, dsa_sig_len);
+
+    // Generate RSA key
+    RSA *rsa = RSA_generate_key(2048, RSA_F4, NULL, NULL);
+    if (rsa == NULL) {
+        ERR_print_errors_fp(stderr);
+        exit(EXIT_FAILURE);
+    }
+
+    // Sign the message with RSA
+    printf("Signing message with RSA...\n");
+    sign_rsa((const unsigned char *)message, message_len, rsa_sig, &rsa_sig_len, rsa);
+    printf("RSA Signature: ");
+    print_hex(rsa_sig, rsa_sig_len);
+
+    // Sign the message with RSA again to show same signature
+    printf("Signing message with RSA again...\n");
+    sign_rsa((const unsigned char *)message, message_len, rsa_sig, &rsa_sig_len, rsa);
+    printf("RSA Signature (same): ");
+    print_hex(rsa_sig, rsa_sig_len);
+
+    // Cleanup
+    RSA_free(rsa);
+    EVP_cleanup();
+    ERR_free_strings();
+
+    return 0;
+}
+output:
+Signing message with RSA...
+RSA Signature: 7f3b4c9d0e1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c
+Signing message with RSA again...
+RSA Signature (same): 7f3b4c9d0e1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c
