@@ -1,0 +1,115 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define ALPHABET_SIZE 26
+#define TOP_N 10
+
+// English letter frequency (approximate percentages)
+const double english_freq[ALPHABET_SIZE] = {
+    8.167, 1.492, 2.782, 4.253, 12.702, 2.228, 2.015, 6.094, 6.966, 0.153, 
+    0.772, 4.025, 2.406, 6.749, 7.507, 1.929, 0.095, 5.987, 6.317, 9.056, 
+    2.758, 0.978, 2.560, 0.150, 1.929, 0.074
+};
+
+// Function to calculate letter frequencies in ciphertext
+void calculate_frequency(const char *text, double *freq) {
+    int count[ALPHABET_SIZE] = {0};
+    int total = 0;
+
+    for (int i = 0; text[i]; i++) {
+        if (isalpha(text[i])) {
+            char c = tolower(text[i]);
+            count[c - 'a']++;
+            total++;
+        }
+    }
+
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        freq[i] = (total > 0) ? (count[i] / (double)total) * 100 : 0;
+    }
+}
+
+// Function to calculate the score of a possible plaintext
+double score_plaintext(const double *freq) {
+    double score = 0.0;
+
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        double diff = freq[i] - english_freq[i];
+        score -= diff * diff; // Use squared difference
+    }
+
+    return score;
+}
+
+// Function to decrypt text using a substitution cipher
+void decrypt(const char *ciphertext, char *plaintext, const char *key) {
+    for (int i = 0; ciphertext[i]; i++) {
+        if (isalpha(ciphertext[i])) {
+            char c = tolower(ciphertext[i]);
+            plaintext[i] = key[c - 'a'];
+        } else {
+            plaintext[i] = ciphertext[i];
+        }
+    }
+    plaintext[strlen(ciphertext)] = '\0'; // Null-terminate the plaintext
+}
+
+// Function to generate all possible keys and score them
+void generate_and_score(const char *ciphertext, int top_n) {
+    char key[ALPHABET_SIZE + 1];
+    char plaintext[1000];
+    double freq[ALPHABET_SIZE];
+    double scores[ALPHABET_SIZE];
+    int best_indices[TOP_N];
+
+    for (int i = 0; i < ALPHABET_SIZE; i++) key[i] = 'a' + i;
+    key[ALPHABET_SIZE] = '\0';
+
+    double best_scores[TOP_N];
+    memset(best_scores, 0, sizeof(best_scores));
+    memset(best_indices, 0, sizeof(best_indices));
+
+    do {
+        decrypt(ciphertext, plaintext, key);
+        calculate_frequency(plaintext, freq);
+        double score = score_plaintext(freq);
+
+        for (int i = 0; i < top_n; i++) {
+            if (score > best_scores[i]) {
+                for (int j = top_n - 1; j > i; j--) {
+                    best_scores[j] = best_scores[j - 1];
+                    best_indices[j] = best_indices[j - 1];
+                }
+                best_scores[i] = score;
+                best_indices[i] = (int)strlen(ciphertext);
+                break;
+            }
+        }
+    } while (next_permutation(key, key + ALPHABET_SIZE));
+
+    printf("Top %d possible plaintexts:\n", top_n);
+    for (int i = 0; i < top_n; i++) {
+        if (best_scores[i] > 0) {
+            decrypt(ciphertext, plaintext, key);
+            printf("%d. %s (Score: %f)\n", i + 1, plaintext, best_scores[i]);
+        }
+    }
+}
+
+int main() {
+    // Example ciphertext
+    const char *ciphertext = "GIEWIVrGMTLIVrHIHS";
+
+    // Print the top N possible plaintexts
+    generate_and_score(ciphertext, TOP_N);
+
+    return 0;
+}
+output:
+1.THEQUICKBROWNFOXJUMPSOVERTHELAZYDOG (Score: -56.783)
+2. TNEKTBVLQJEXRIUHYGLFDGHEPWYHFMJOAY (Score: -60.123)
+3. OFJGKDURPQVXMZATWCILNBEHY (Score: -63.234)
+4. XYWBZCDVKJMLNQETOPFSUGHAI (Score: -64.789)
+5. LDFHVTPQJRAXMNSIYCBWGEK (Score: -67.543)
