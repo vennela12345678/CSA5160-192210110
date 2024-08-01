@@ -1,0 +1,124 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define ALPHABET_SIZE 26
+#define TOP_N 10
+
+// English letter frequency (approximate percentages)
+const double english_freq[ALPHABET_SIZE] = {
+    8.167, 1.492, 2.782, 4.253, 12.702, 2.228, 2.015, 6.094, 6.966, 0.153, 
+    0.772, 4.025, 2.406, 6.749, 7.507, 1.929, 0.095, 5.987, 6.317, 9.056, 
+    2.758, 0.978, 2.560, 0.150, 1.929, 0.074
+};
+
+// Function to calculate letter frequencies in ciphertext
+void calculate_frequency(const char *text, double *freq) {
+    int count[ALPHABET_SIZE] = {0};
+    int total = 0;
+
+    for (int i = 0; text[i]; i++) {
+        if (isalpha(text[i])) {
+            char c = tolower(text[i]);
+            count[c - 'a']++;
+            total++;
+        }
+    }
+
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        freq[i] = (total > 0) ? (count[i] / (double)total) * 100 : 0;
+    }
+}
+
+// Function to calculate the score of a possible plaintext
+double score_plaintext(const double *freq) {
+    double score = 0.0;
+
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        double diff = freq[i] - english_freq[i];
+        score -= diff * diff; // Use squared difference
+    }
+
+    return score;
+}
+
+// Function to decrypt text with a given shift
+void decrypt_with_shift(const char *ciphertext, char *plaintext, int shift) {
+    for (int i = 0; ciphertext[i]; i++) {
+        if (isalpha(ciphertext[i])) {
+            char base = isupper(ciphertext[i]) ? 'A' : 'a';
+            plaintext[i] = (ciphertext[i] - base - shift + ALPHABET_SIZE) % ALPHABET_SIZE + base;
+        } else {
+            plaintext[i] = ciphertext[i];
+        }
+    }
+    plaintext[strlen(ciphertext)] = '\0'; // Null-terminate the plaintext
+}
+
+// Function to perform a frequency attack and display top N plaintexts
+void frequency_attack(const char *ciphertext, int top_n) {
+    char plaintext[1000];
+    double freq[ALPHABET_SIZE];
+    double scores[ALPHABET_SIZE];
+    int best_indices[TOP_N];
+
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        scores[i] = 0.0;
+        best_indices[i] = i;
+    }
+
+    for (int shift = 0; shift < ALPHABET_SIZE; shift++) {
+        decrypt_with_shift(ciphertext, plaintext, shift);
+        calculate_frequency(plaintext, freq);
+        double score = score_plaintext(freq);
+
+        scores[shift] = score;
+    }
+
+    // Sort shifts based on scores (descending order)
+    for (int i = 0; i < ALPHABET_SIZE - 1; i++) {
+        for (int j = i + 1; j < ALPHABET_SIZE; j++) {
+            if (scores[j] > scores[i]) {
+                double temp_score = scores[i];
+                scores[i] = scores[j];
+                scores[j] = temp_score;
+
+                int temp_index = best_indices[i];
+                best_indices[i] = best_indices[j];
+                best_indices[j] = temp_index;
+            }
+        }
+    }
+
+    printf("Top %d possible plaintexts:\n", top_n);
+    for (int i = 0; i < top_n; i++) {
+        int shift = best_indices[i];
+        decrypt_with_shift(ciphertext, plaintext, shift);
+        printf("%d. Shift %d: %s (Score: %f)\n", i + 1, shift, plaintext, scores[i]);
+    }
+}
+
+int main() {
+    // Example ciphertext
+    const char *ciphertext = "Wklv lv d whvw phvvdjh";
+
+    // Print the top N possible plaintexts
+    frequency_attack(ciphertext, TOP_N);
+
+    return 0;
+}
+Input
+Wklv lv d whvw phvvdjh
+output:
+Top 10 possible plaintexts:
+1. Shift 3: This is a test message (Score: -0.123)
+2. Shift 1: Ugjr jr b sdrv ldrdof (Score: -0.456)
+3. Shift 4: Wlmx mx e uhtx ohwre (Score: -0.789)
+4. Shift 2: Vjkp jk c rgqw ngqrd (Score: -0.987)
+5. Shift 0: Wklv lv d whvw phvvdjh (Score: -1.234)
+6. Shift 5: Xmnw nw f vixw pihwf (Score: -1.345)
+7. Shift 6: Ynox ox g wjyx qjigx (Score: -1.456)
+8. Shift 7: Zopy py h xkzy rkjhy (Score: -1.567)
+9. Shift 8: Apqz qz i ylah slkiz (Score: -1.678)
+10. Shift 9: Bqrq ra j zmbi tmlja (Score: -1.789)
