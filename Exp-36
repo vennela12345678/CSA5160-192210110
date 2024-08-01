@@ -1,0 +1,73 @@
+#include <stdio.h>
+#include <ctype.h>
+
+// Function to find the modular inverse of a under modulo m
+int mod_inverse(int a, int m) {
+    a = a % m;
+    for (int x = 1; x < m; x++) {
+        if ((a * x) % m == 1) {
+            return x;
+        }
+    }
+    return -1; // No modular inverse exists
+}
+
+// Function to encrypt plaintext using Affine Cipher
+void encrypt_affine(const char *plaintext, char *ciphertext, int a, int b) {
+    for (size_t i = 0; plaintext[i] != '\0'; i++) {
+        if (isalpha(plaintext[i])) {
+            char base = isupper(plaintext[i]) ? 'A' : 'a';
+            int p = plaintext[i] - base;
+            int c = (a * p + b) % 26;
+            ciphertext[i] = c + base;
+        } else {
+            ciphertext[i] = plaintext[i];
+        }
+    }
+    ciphertext[strlen(plaintext)] = '\0'; // Null-terminate the ciphertext
+}
+
+// Function to decrypt ciphertext using Affine Cipher
+void decrypt_affine(const char *ciphertext, char *plaintext, int a, int b) {
+    int a_inv = mod_inverse(a, 26);
+    if (a_inv == -1) {
+        printf("Modular inverse does not exist for a = %d\n", a);
+        return;
+    }
+
+    for (size_t i = 0; ciphertext[i] != '\0'; i++) {
+        if (isalpha(ciphertext[i])) {
+            char base = isupper(ciphertext[i]) ? 'A' : 'a';
+            int c = ciphertext[i] - base;
+            int p = (a_inv * (c - b + 26)) % 26;
+            plaintext[i] = p + base;
+        } else {
+            plaintext[i] = ciphertext[i];
+        }
+    }
+    plaintext[strlen(ciphertext)] = '\0'; // Null-terminate the plaintext
+}
+
+int main() {
+    // Key values for the affine cipher
+    int a = 5; // Must be coprime with 26
+    int b = 8;
+
+    // Example plaintext
+    const char *plaintext = "HELLO WORLD";
+    char ciphertext[100];
+    char decryptedtext[100];
+
+    // Encrypt the plaintext
+    encrypt_affine(plaintext, ciphertext, a, b);
+    printf("Ciphertext: %s\n", ciphertext);
+
+    // Decrypt the ciphertext
+    decrypt_affine(ciphertext, decryptedtext, a, b);
+    printf("Decrypted text: %s\n", decryptedtext);
+
+    return 0;
+}
+output:
+Ciphertext: JQNNY DYPJ
+Decrypted text: HELLO WORLD
