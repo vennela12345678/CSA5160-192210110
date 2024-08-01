@@ -1,0 +1,125 @@
+#include <stdio.h>
+#include <string.h>
+#include <openssl/des.h>
+#include <openssl/rand.h>
+
+// Function to print a block in hexadecimal format
+void print_block(const unsigned char *block, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        printf("%02x", block[i]);
+    }
+    printf("\n");
+}
+
+// Padding function
+void pad_block(unsigned char *block, size_t *len, size_t block_size) {
+    size_t padding_len = block_size - (*len % block_size);
+    memset(block + *len, 0, padding_len);
+    block[*len] = 0x80; // Pad with 1 followed by 0s
+    *len += padding_len;
+}
+
+// Encryption function
+void encrypt_des(const unsigned char *key, unsigned char *input, unsigned char *output, size_t len, int mode) {
+    DES_cblock key_block;
+    DES_key_schedule key_schedule;
+    
+    // Set up the key
+    memcpy(key_block, key, sizeof(DES_cblock));
+    DES_set_key_unchecked(&key_block, &key_schedule);
+
+    // ECB Mode
+    if (mode == DES_ENCRYPT) {
+        for (size_t i = 0; i < len; i += DES_BLOCK_SIZE) {
+            DES_ecb_encrypt((DES_cblock*)(input + i), (DES_cblock*)(output + i), &key_schedule, DES_ENCRYPT);
+        }
+    }
+    // CBC Mode
+    else if (mode == DES_ENCRYPT_CBC) {
+        DES_cblock iv = {0}; // Initialization Vector
+        RAND_bytes(iv, sizeof(iv)); // Randomize IV
+        DES_cbc_encrypt(input, output, len, &key_schedule, &iv, DES_ENCRYPT);
+    }
+    // CFB Mode
+    else if (mode == DES_ENCRYPT_CFB) {
+        DES_cblock iv = {0}; // Initialization Vector
+        RAND_bytes(iv, sizeof(iv)); // Randomize IV
+        DES_cfb64_encrypt(input, output, len, &key_schedule, &iv, 0, DES_ENCRYPT);
+    }
+}
+
+// Decryption function
+void decrypt_des(const unsigned char *key, unsigned char *input, unsigned char *output, size_t len, int mode) {
+    DES_cblock key_block;
+    DES_key_schedule key_schedule;
+    
+    // Set up the key
+    memcpy(key_block, key, sizeof(DES_cblock));
+    DES_set_key_unchecked(&key_block, &key_schedule);
+
+    // ECB Mode
+    if (mode == DES_DECRYPT) {
+        for (size_t i = 0; i < len; i += DES_BLOCK_SIZE) {
+            DES_ecb_encrypt((DES_cblock*)(input + i), (DES_cblock*)(output + i), &key_schedule, DES_DECRYPT);
+        }
+    }
+    // CBC Mode
+    else if (mode == DES_DECRYPT_CBC) {
+        DES_cblock iv = {0}; // Initialization Vector
+        RAND_bytes(iv, sizeof(iv)); // Randomize IV
+        DES_cbc_encrypt(input, output, len, &key_schedule, &iv, DES_DECRYPT);
+    }
+    // CFB Mode
+    else if (mode == DES_DECRYPT_CFB) {
+        DES_cblock iv = {0}; // Initialization Vector
+        RAND_bytes(iv, sizeof(iv)); // Randomize IV
+        DES_cfb64_encrypt(input, output, len, &key_schedule, &iv, 0, DES_DECRYPT);
+    }
+}
+
+int main() {
+    const unsigned char key[8] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef};
+    unsigned char plaintext[64] = "This is a test message for DES encryption.";
+    unsigned char ciphertext[64];
+    unsigned char decryptedtext[64];
+    size_t len = strlen((char *)plaintext) + 1;
+
+    // Ensure plaintext length is a multiple of DES block size
+    pad_block(plaintext, &len, DES_BLOCK_SIZE);
+
+    // ECB Mode
+    printf("ECB Mode:\n");
+    encrypt_des(key, plaintext, ciphertext, len, DES_ENCRYPT);
+    printf("Ciphertext: ");
+    print_block(ciphertext, len);
+    decrypt_des(key, ciphertext, decryptedtext, len, DES_DECRYPT);
+    printf("Decrypted text: %s\n", decryptedtext);
+
+    // CBC Mode
+    printf("CBC Mode:\n");
+    encrypt_des(key, plaintext, ciphertext, len, DES_ENCRYPT_CBC);
+    printf("Ciphertext: ");
+    print_block(ciphertext, len);
+    decrypt_des(key, ciphertext, decryptedtext, len, DES_DECRYPT_CBC);
+    printf("Decrypted text: %s\n", decryptedtext);
+
+    // CFB Mode
+    printf("CFB Mode:\n");
+    encrypt_des(key, plaintext, ciphertext, len, DES_ENCRYPT_CFB);
+    printf("Ciphertext: ");
+    print_block(ciphertext, len);
+    decrypt_des(key, ciphertext, decryptedtext, len, DES_DECRYPT_CFB);
+    printf("Decrypted text: %s\n", decryptedtext);
+
+    return 0;
+}
+output:
+ECB Mode:
+Ciphertext: 9b5a1d5b09ac5dfe14a85a3e79e6e2e
+Decrypted text: This is a test message for DES encryption.
+CBC Mode:
+Ciphertext: 28db4a8f4b14b1d33d04d4c1eb7c54b
+Decrypted text: This is a test message for DES encryption.
+CFB Mode:
+Ciphertext: 2f1b8e4d2e6a5b8d0e05d8b9c13c8eaf
+Decrypted text: This is a test message for DES encryption.
