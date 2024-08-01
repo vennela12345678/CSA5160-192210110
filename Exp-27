@@ -115,3 +115,17 @@ int main() {
 
     return 0;
 }
+output:
+Public Key: (e: 65537, n: 3233)
+Private Key: (d: 18446744073709551249, n: 3233)
+Original Message: HELLO
+Encrypted 'H' -> 2369
+Encrypted 'E' -> 1387
+Encrypted 'L' -> 3061
+Encrypted 'L' -> 3061
+Encrypted 'O' -> 2549
+Decrypted 2369 -> 'B'
+Decrypted 1387 -> 'v'
+Decrypted 3061 -> 'A'
+Decrypted 3061 -> 'A'
+Decrypted 2549 -> '≈'
