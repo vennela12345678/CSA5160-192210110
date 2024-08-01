@@ -1,0 +1,53 @@
+#include <stdio.h>
+#include <string.h>
+#include <openssl/des.h>
+
+void print_block(const unsigned char *block, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        printf("%02x", block[i]);
+    }
+    printf("\n");
+}
+
+void encrypt_decrypt_des(const unsigned char *key, const unsigned char *input, unsigned char *output, int encrypt) {
+    DES_cblock key_block;
+    DES_key_schedule key_schedule;
+    
+    // Set up the key
+    memcpy(key_block, key, sizeof(DES_cblock));
+    DES_set_key_unchecked(&key_block, &key_schedule);
+
+    // Encrypt or decrypt
+    if (encrypt) {
+        DES_ecb_encrypt((DES_cblock*)input, (DES_cblock*)output, &key_schedule, DES_ENCRYPT);
+    } else {
+        DES_ecb_encrypt((DES_cblock*)input, (DES_cblock*)output, &key_schedule, DES_DECRYPT);
+    }
+}
+
+int main() {
+    // Key and plaintext
+    unsigned char key[8] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef};
+    unsigned char plaintext[8] = "ABCDEFGH"; // 64-bit (8 bytes)
+    unsigned char ciphertext[8];
+    unsigned char decryptedtext[8];
+
+    printf("Plaintext: ");
+    print_block(plaintext, sizeof(plaintext));
+
+    // Encrypt
+    encrypt_decrypt_des(key, plaintext, ciphertext, 1);
+    printf("Ciphertext: ");
+    print_block(ciphertext, sizeof(ciphertext));
+
+    // Decrypt
+    encrypt_decrypt_des(key, ciphertext, decryptedtext, 0);
+    printf("Decrypted text: ");
+    print_block(decryptedtext, sizeof(decryptedtext));
+
+    return 0;
+}
+output:
+Plaintext: 4142434445464748
+Ciphertext: 3d8a1e2b98df9cbb
+Decrypted text: 4142434445464748
