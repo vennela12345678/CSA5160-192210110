@@ -1,0 +1,64 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define LANE_SIZE 64
+#define NUM_LANES 25
+#define BLOCK_SIZE 1024
+#define CAPACITY_LANES 16
+
+// Function to initialize the state matrix
+void initialize_state(uint64_t state[NUM_LANES]) {
+    for (int i = 0; i < NUM_LANES; i++) {
+        state[i] = 0;
+    }
+}
+
+// Function to process a block
+void process_block(uint64_t state[NUM_LANES], uint64_t block[NUM_LANES]) {
+    for (int i = 0; i < NUM_LANES; i++) {
+        state[i] ^= block[i];
+    }
+}
+
+// Function to check if all capacity lanes have at least one non-zero bit
+int check_capacity_lanes(uint64_t state[NUM_LANES]) {
+    for (int i = 0; i < CAPACITY_LANES; i++) {
+        if (state[i] == 0) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int main() {
+    uint64_t state[NUM_LANES];
+    uint64_t block[NUM_LANES];
+
+    initialize_state(state);
+
+    srand(time(NULL));
+
+    // Initialize the first message block (P0) with at least one non-zero bit in each lane
+    for (int i = 0; i < NUM_LANES; i++) {
+        block[i] = (uint64_t)rand() | 1;  // Ensure at least one non-zero bit
+    }
+
+    int iterations = 0;
+    while (!check_capacity_lanes(state)) {
+        process_block(state, block);
+        iterations++;
+
+        // Generate a new block for the next iteration
+        for (int i = 0; i < NUM_LANES; i++) {
+            block[i] = (uint64_t)rand() | 1;  // Ensure at least one non-zero bit
+        }
+    }
+
+    printf("Number of iterations before all capacity lanes have at least one non-zero bit: %d\n", iterations);
+
+    return 0;
+}
+output:
+Number of iterations before all capacity lanes have at least one non-zero bit: 1
