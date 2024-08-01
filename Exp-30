@@ -1,0 +1,68 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <openssl/aes.h>
+
+// Function to XOR two blocks
+void xor_blocks(uint8_t *out, const uint8_t *in1, const uint8_t *in2, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        out[i] = in1[i] ^ in2[i];
+    }
+}
+
+// Function to print a block in hexadecimal format
+void print_block(const uint8_t *block, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        printf("%02x", block[i]);
+    }
+    printf("\n");
+}
+
+// Function to compute CBC-MAC
+void cbc_mac(uint8_t *T, const uint8_t *K, const uint8_t *X, size_t len) {
+    AES_KEY aes_key;
+    uint8_t block[AES_BLOCK_SIZE] = {0};
+
+    // Set the encryption key
+    AES_set_encrypt_key(K, 128, &aes_key);
+
+    // Encrypt the block
+    AES_encrypt(X, block, &aes_key);
+
+    // Copy the result to T
+    memcpy(T, block, AES_BLOCK_SIZE);
+}
+
+int main() {
+    // Example key and message
+    uint8_t K[AES_BLOCK_SIZE] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 
+                                 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+    uint8_t X[AES_BLOCK_SIZE] = {0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 
+                                 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f};
+    uint8_t T[AES_BLOCK_SIZE];
+
+    // Compute CBC-MAC for the one-block message X
+    cbc_mac(T, K, X, AES_BLOCK_SIZE);
+    printf("CBC-MAC for one-block message X: ");
+    print_block(T, AES_BLOCK_SIZE);
+
+    // Compute X ⊕ T
+    uint8_t X_xor_T[AES_BLOCK_SIZE];
+    xor_blocks(X_xor_T, X, T, AES_BLOCK_SIZE);
+
+    // Compute CBC-MAC for the two-block message X || (X ⊕ T)
+    uint8_t intermediate[AES_BLOCK_SIZE];
+    uint8_t T2[AES_BLOCK_SIZE];
+
+    // First block (X)
+    cbc_mac(intermediate, K, X, AES_BLOCK_SIZE);
+
+    // Second block (X ⊕ T)
+    xor_blocks(intermediate, intermediate, X_xor_T, AES_BLOCK_SIZE);
+    cbc_mac(T2, K, intermediate, AES_BLOCK_SIZE);
+
+    printf("CBC-MAC for two-block message X || (X ⊕ T): ");
+    print_block(T2, AES_BLOCK_SIZE);
+
+    return 0;
+}
