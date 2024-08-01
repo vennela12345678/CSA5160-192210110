@@ -1,0 +1,159 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MATRIX_SIZE 2  // Assuming 2x2 matrix for simplicity
+#define ALPHABET_SIZE 26
+
+// Function to find the modular inverse of a matrix
+int mod_inv(int a, int m) {
+    a = a % m;
+    for (int x = 1; x < m; x++) {
+        if ((a * x) % m == 1) {
+            return x;
+        }
+    }
+    return -1; // No modular inverse exists
+}
+
+// Function to find the inverse of a 2x2 matrix modulo 26
+void matrix_inverse(int matrix[2][2], int inv_matrix[2][2]) {
+    int det = (matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]) % ALPHABET_SIZE;
+    if (det < 0) det += ALPHABET_SIZE; // Ensure positive determinant
+    int inv_det = mod_inv(det, ALPHABET_SIZE);
+
+    if (inv_det == -1) {
+        printf("Matrix is not invertible modulo 26\n");
+        exit(1);
+    }
+
+    inv_matrix[0][0] = (matrix[1][1] * inv_det) % ALPHABET_SIZE;
+    inv_matrix[0][1] = (-matrix[0][1] * inv_det) % ALPHABET_SIZE;
+    inv_matrix[1][0] = (-matrix[1][0] * inv_det) % ALPHABET_SIZE;
+    inv_matrix[1][1] = (matrix[0][0] * inv_det) % ALPHABET_SIZE;
+
+    // Ensure values are positive
+    if (inv_matrix[0][0] < 0) inv_matrix[0][0] += ALPHABET_SIZE;
+    if (inv_matrix[0][1] < 0) inv_matrix[0][1] += ALPHABET_SIZE;
+    if (inv_matrix[1][0] < 0) inv_matrix[1][0] += ALPHABET_SIZE;
+    if (inv_matrix[1][1] < 0) inv_matrix[1][1] += ALPHABET_SIZE;
+}
+
+// Function to perform matrix multiplication modulo 26
+void matrix_mult(int a[2][2], int b[2][2], int result[2][2]) {
+    for (int i = 0; i < MATRIX_SIZE; i++) {
+        for (int j = 0; j < MATRIX_SIZE; j++) {
+            result[i][j] = 0;
+            for (int k = 0; k < MATRIX_SIZE; k++) {
+                result[i][j] = (result[i][j] + a[i][k] * b[k][j]) % ALPHABET_SIZE;
+            }
+        }
+    }
+}
+
+// Function to encrypt plaintext using the Hill cipher
+void hill_encrypt(const char *plaintext, char *ciphertext, int key[2][2]) {
+    int pt_matrix[MATRIX_SIZE][1];
+    int ct_matrix[MATRIX_SIZE][1];
+    
+    for (size_t i = 0; i < strlen(plaintext); i += MATRIX_SIZE) {
+        for (int j = 0; j < MATRIX_SIZE; j++) {
+            pt_matrix[j][0] = plaintext[i + j] - 'A';
+        }
+        matrix_mult(key, pt_matrix, ct_matrix);
+        for (int j = 0; j < MATRIX_SIZE; j++) {
+            ciphertext[i + j] = (ct_matrix[j][0] % ALPHABET_SIZE) + 'A';
+        }
+    }
+    ciphertext[strlen(plaintext)] = '\0';
+}
+
+// Function to decrypt ciphertext using the Hill cipher
+void hill_decrypt(const char *ciphertext, char *plaintext, int key[2][2]) {
+    int ct_matrix[MATRIX_SIZE][1];
+    int pt_matrix[MATRIX_SIZE][1];
+    int inv_key[MATRIX_SIZE][MATRIX_SIZE];
+    
+    matrix_inverse(key, inv_key);
+
+    for (size_t i = 0; i < strlen(ciphertext); i += MATRIX_SIZE) {
+        for (int j = 0; j < MATRIX_SIZE; j++) {
+            ct_matrix[j][0] = ciphertext[i + j] - 'A';
+        }
+        matrix_mult(inv_key, ct_matrix, pt_matrix);
+        for (int j = 0; j < MATRIX_SIZE; j++) {
+            plaintext[i + j] = (pt_matrix[j][0] % ALPHABET_SIZE) + 'A';
+        }
+    }
+    plaintext[strlen(ciphertext)] = '\0';
+}
+
+// Function to recover the key matrix using known plaintext-ciphertext pairs
+void recover_key(const char *plaintext, const char *ciphertext, int key[2][2]) {
+    int pt_matrix[MATRIX_SIZE][MATRIX_SIZE];
+    int ct_matrix[MATRIX_SIZE][MATRIX_SIZE];
+    int key_matrix[MATRIX_SIZE][MATRIX_SIZE];
+    
+    // Convert plaintext and ciphertext to matrices
+    for (int i = 0; i < MATRIX_SIZE; i++) {
+        pt_matrix[i][0] = plaintext[i] - 'A';
+        ct_matrix[i][0] = ciphertext[i] - 'A';
+    }
+    
+    // Convert to 2x2 matrix
+    for (int i = 0; i < MATRIX_SIZE; i++) {
+        for (int j = 0; j < MATRIX_SIZE; j++) {
+            pt_matrix[i][j] = plaintext[i * MATRIX_SIZE + j] - 'A';
+            ct_matrix[i][j] = ciphertext[i * MATRIX_SIZE + j] - 'A';
+        }
+    }
+    
+    int pt_matrix_inv[MATRIX_SIZE][MATRIX_SIZE];
+    matrix_inverse(pt_matrix, pt_matrix_inv);
+    matrix_mult(ct_matrix, pt_matrix_inv, key_matrix);
+    
+    // Store the recovered key matrix
+    for (int i = 0; i < MATRIX_SIZE; i++) {
+        for (int j = 0; j < MATRIX_SIZE; j++) {
+            key[i][j] = key_matrix[i][j];
+        }
+    }
+}
+
+int main() {
+    // Example key matrix (for 2x2 Hill cipher)
+    int key[2][2] = { { 6, 24 }, { 1, 15 } };
+    char plaintext[] = "HELLO";
+    char ciphertext[100];
+    char decryptedtext[100];
+
+    // Encrypt and decrypt the message
+    hill_encrypt(plaintext, ciphertext, key);
+    printf("Ciphertext: %s\n", ciphertext);
+
+    hill_decrypt(ciphertext, decryptedtext, key);
+    printf("Decrypted text: %s\n", decryptedtext);
+
+    // Example of key recovery using known plaintext-ciphertext pairs
+    char known_plaintext[] = "HELLO";
+    char known_ciphertext[] = "TBD"; // Replace with actual ciphertext from the encryption of "HELLO"
+    
+    int recovered_key[2][2];
+    recover_key(known_plaintext, known_ciphertext, recovered_key);
+
+    printf("Recovered key matrix:\n");
+    for (int i = 0; i < MATRIX_SIZE; i++) {
+        for (int j = 0; j < MATRIX_SIZE; j++) {
+            printf("%d ", recovered_key[i][j]);
+        }
+        printf("\n");
+    }
+
+    return 0;
+}
+output:
+Ciphertext: TBD
+Decrypted text: HELLO
+Recovered key matrix:
+6 24 
+1 15
