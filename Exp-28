@@ -1,0 +1,61 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
+#include <inttypes.h>
+
+// Function to compute modular exponentiation
+uint64_t mod_exp(uint64_t base, uint64_t exp, uint64_t mod) {
+    uint64_t result = 1;
+    base = base % mod;
+    while (exp > 0) {
+        if (exp % 2 == 1) {
+            result = (result * base) % mod;
+        }
+        exp = exp >> 1;
+        base = (base * base) % mod;
+    }
+    return result;
+}
+
+int main() {
+    uint64_t q = 23;  // Example prime number
+    uint64_t a = 5;   // Example primitive root modulo q
+
+    // Initialize random number generator
+    srand(time(NULL));
+
+    // Alice's secret number
+    uint64_t xa = rand() % (q - 1) + 1;
+    uint64_t ya = mod_exp(a, xa, q);
+
+    // Bob's secret number
+    uint64_t xb = rand() % (q - 1) + 1;
+    uint64_t yb = mod_exp(a, xb, q);
+
+    // Exchange public values ya and yb
+    printf("Alice's public value: %" PRIu64 "\n", ya);
+    printf("Bob's public value: %" PRIu64 "\n", yb);
+
+    // Compute shared secret
+    uint64_t shared_secret_alice = mod_exp(yb, xa, q);
+    uint64_t shared_secret_bob = mod_exp(ya, xb, q);
+
+    printf("Alice's computed shared secret: %" PRIu64 "\n", shared_secret_alice);
+    printf("Bob's computed shared secret: %" PRIu64 "\n", shared_secret_bob);
+
+    // Verify that both shared secrets are equal
+    if (shared_secret_alice == shared_secret_bob) {
+        printf("Key exchange successful. Shared secret: %" PRIu64 "\n", shared_secret_alice);
+    } else {
+        printf("Key exchange failed.\n");
+    }
+
+    return 0;
+}
+output:
+Alice's public value: 17
+Bob's public value: 13
+Alice's computed shared secret: 9
+Bob's computed shared secret: 9
+Key exchange successful. Shared secret: 9
