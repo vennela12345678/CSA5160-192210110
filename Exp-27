@@ -1,0 +1,117 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <string.h>
+
+// Function to compute gcd using Euclid's algorithm
+uint64_t gcd(uint64_t a, uint64_t b) {
+    while (b != 0) {
+        uint64_t t = b;
+        b = a % b;
+        a = t;
+    }
+    return a;
+}
+
+// Function to compute modular exponentiation
+uint64_t mod_exp(uint64_t base, uint64_t exp, uint64_t mod) {
+    uint64_t result = 1;
+    base = base % mod;
+    while (exp > 0) {
+        if (exp % 2 == 1) {
+            result = (result * base) % mod;
+        }
+        exp = exp >> 1;
+        base = (base * base) % mod;
+    }
+    return result;
+}
+
+// Function to compute the modular multiplicative inverse using Extended Euclidean algorithm
+uint64_t mod_inv(uint64_t a, uint64_t m) {
+    uint64_t m0 = m, t, q;
+    uint64_t x0 = 0, x1 = 1;
+    
+    if (m == 1) return 0;
+
+    while (a > 1) {
+        q = a / m;
+        t = m;
+        m = a % m;
+        a = t;
+        t = x0;
+        x0 = x1 - q * x0;
+        x1 = t;
+    }
+    
+    if (x1 < 0) x1 += m0;
+    
+    return x1;
+}
+
+// Function to generate RSA keys
+void generate_keys(uint64_t p, uint64_t q, uint64_t *n, uint64_t *e, uint64_t *d) {
+    *n = p * q;
+    uint64_t phi = (p - 1) * (q - 1);
+
+    // Choose e such that 1 < e < phi and gcd(e, phi) = 1
+    *e = 65537; // Commonly used value for e
+    while (gcd(*e, phi) != 1) {
+        (*e)++;
+    }
+
+    // Compute d as the modular multiplicative inverse of e mod phi
+    *d = mod_inv(*e, phi);
+}
+
+// Function to encrypt a message
+uint64_t encrypt(uint64_t message, uint64_t e, uint64_t n) {
+    return mod_exp(message, e, n);
+}
+
+// Function to decrypt a message
+uint64_t decrypt(uint64_t ciphertext, uint64_t d, uint64_t n) {
+    return mod_exp(ciphertext, d, n);
+}
+
+// Function to convert a character to its corresponding integer (A=0, B=1, ..., Z=25)
+uint64_t char_to_int(char c) {
+    return c - 'A';
+}
+
+// Function to convert an integer back to its corresponding character
+char int_to_char(uint64_t i) {
+    return i + 'A';
+}
+
+int main() {
+    uint64_t p = 61; // Example prime number
+    uint64_t q = 53; // Example prime number
+    uint64_t n, e, d;
+
+    // Generate RSA keys
+    generate_keys(p, q, &n, &e, &d);
+    printf("Public Key: (e: %" PRIu64 ", n: %" PRIu64 ")\n", e, n);
+    printf("Private Key: (d: %" PRIu64 ", n: %" PRIu64 ")\n", d, n);
+
+    char plaintext[] = "HELLO"; // Example plaintext
+    printf("Original Message: %s\n", plaintext);
+
+    uint64_t ciphertext[sizeof(plaintext)];
+    uint64_t decrypted_message[sizeof(plaintext)];
+
+    // Encrypt each character
+    for (size_t i = 0; i < strlen(plaintext); i++) {
+        uint64_t message_int = char_to_int(plaintext[i]);
+        ciphertext[i] = encrypt(message_int, e, n);
+        printf("Encrypted '%c' -> %" PRIu64 "\n", plaintext[i], ciphertext[i]);
+    }
+
+    // Decrypt each character
+    for (size_t i = 0; i < strlen(plaintext); i++) {
+        decrypted_message[i] = decrypt(ciphertext[i], d, n);
+        printf("Decrypted %" PRIu64 " -> '%c'\n", ciphertext[i], int_to_char(decrypted_message[i]));
+    }
+
+    return 0;
+}
